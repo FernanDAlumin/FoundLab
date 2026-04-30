@@ -82,7 +82,7 @@ def test_normalized_bar_requires_a_price() -> None:
 
 
 def test_order_intent_accepts_amount_or_quantity() -> None:
-    intent = OrderIntent(
+    amount_intent = OrderIntent(
         intended_date=date(2024, 1, 2),
         asset_id="510300",
         asset_type=AssetType.ETF,
@@ -92,9 +92,19 @@ def test_order_intent_accepts_amount_or_quantity() -> None:
         note="baseline",
         tags=("baseline", "dca"),
     )
+    quantity_intent = OrderIntent(
+        intended_date=date(2024, 1, 2),
+        asset_id="510300",
+        asset_type=AssetType.ETF,
+        side=OrderSide.BUY,
+        quantity=Decimal("10"),
+        source="daily_dca",
+    )
 
-    assert intent.amount == Decimal("100.00")
-    assert intent.quantity is None
+    assert amount_intent.amount == Decimal("100.00")
+    assert amount_intent.quantity is None
+    assert quantity_intent.amount is None
+    assert quantity_intent.quantity == Decimal("10")
 
 
 def test_order_intent_rejects_missing_amount_and_quantity() -> None:
@@ -113,6 +123,15 @@ def test_enums_have_expected_storage_values() -> None:
     assert AssetType.STOCK.value == "stock"
     assert AssetType.PUBLIC_FUND.value == "public_fund"
     assert ProviderName.AKSHARE.value == "akshare"
+    assert ProviderName.TUSHARE.value == "tushare"
+    assert AdjustmentMode.NONE.value == ""
     assert AdjustmentMode.QFQ.value == "qfq"
+    assert AdjustmentMode.HFQ.value == "hfq"
+    assert NonTradingDayPolicy.FAIL.value == "fail"
+    assert NonTradingDayPolicy.SKIP.value == "skip"
     assert NonTradingDayPolicy.NEXT.value == "next"
     assert RunStatus.PENDING.value == "pending"
+    assert RunStatus.RUNNING.value == "running"
+    assert RunStatus.SUCCEEDED.value == "succeeded"
+    assert RunStatus.SUCCEEDED_WITH_WARNINGS.value == "succeeded_with_warnings"
+    assert RunStatus.FAILED.value == "failed"
