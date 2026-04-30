@@ -27,3 +27,4 @@ class ProviderRequest:
 class MarketDataProvider(Protocol):
     def fetch_daily(self, request: ProviderRequest) -> pd.DataFrame:
         """Return a raw provider frame for the requested daily series."""
+        ...

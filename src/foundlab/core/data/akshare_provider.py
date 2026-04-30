@@ -16,7 +16,7 @@ class AkShareProvider:
         self._client = client
 
     def fetch_daily(self, request: ProviderRequest) -> pd.DataFrame:
-        if request.asset_type is AssetType.ETF:
+        if request.asset_type == AssetType.ETF:
             return self._client.fund_etf_hist_em(
                 symbol=request.asset_id,
                 period="daily",
@@ -25,7 +25,7 @@ class AkShareProvider:
                 adjust=request.adjustment.value,
             )
 
-        if request.asset_type is AssetType.STOCK:
+        if request.asset_type == AssetType.STOCK:
             return self._client.stock_zh_a_hist(
                 symbol=request.asset_id,
                 period="daily",
@@ -34,7 +34,7 @@ class AkShareProvider:
                 adjust=request.adjustment.value,
             )
 
-        if request.asset_type is AssetType.PUBLIC_FUND:
+        if request.asset_type == AssetType.PUBLIC_FUND:
             frame = self._client.fund_open_fund_info_em(
                 symbol=request.asset_id,
                 indicator="单位净值走势",
