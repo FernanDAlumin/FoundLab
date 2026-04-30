@@ -72,7 +72,13 @@ def _normalize_fund_row(
 
 
 def _decimal(value: Any) -> Decimal:
-    return Decimal(str(value))
+    if value is None or pd.isna(value):
+        raise ValueError("Required decimal value is missing or non-finite")
+
+    decimal_value = Decimal(str(value))
+    if not decimal_value.is_finite():
+        raise ValueError("Required decimal value is missing or non-finite")
+    return decimal_value
 
 
 def _decimal_or_none(value: Any) -> Decimal | None:
