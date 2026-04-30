@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 import pytest
@@ -11,14 +11,14 @@ from foundlab.core.enums import (
     ProviderName,
     RunStatus,
 )
-from foundlab.core.models import DataWarning, NormalizedBar, OrderIntent, ProviderDatasetMeta
+from foundlab.core.models import NormalizedBar, OrderIntent, ProviderDatasetMeta
 
 
 def test_normalized_bar_uses_adjusted_close_before_close() -> None:
     meta = ProviderDatasetMeta(
         provider=ProviderName.AKSHARE,
         interface="stock_zh_a_hist",
-        retrieved_at=datetime(2026, 4, 30, tzinfo=timezone.utc),
+        retrieved_at=datetime(2026, 4, 30, tzinfo=UTC),
         asset_id="000001",
         asset_type=AssetType.STOCK,
         adjustment=AdjustmentMode.QFQ,
@@ -40,11 +40,54 @@ def test_normalized_bar_uses_adjusted_close_before_close() -> None:
     assert bar.effective_price == Decimal("9.95")
 
 
+def test_normalized_bar_uses_zero_adjusted_close_before_close() -> None:
+    meta = ProviderDatasetMeta(
+        provider=ProviderName.AKSHARE,
+        interface="stock_zh_a_hist",
+        retrieved_at=datetime(2026, 4, 30, tzinfo=UTC),
+        asset_id="000001",
+        asset_type=AssetType.STOCK,
+        adjustment=AdjustmentMode.QFQ,
+    )
+    bar = NormalizedBar(
+        asset_id="000001",
+        asset_type=AssetType.STOCK,
+        date=date(2024, 1, 2),
+        close=Decimal("10"),
+        adjusted_close=Decimal("0"),
+        tradable=True,
+        meta=meta,
+    )
+
+    assert bar.effective_price == Decimal("0")
+
+
+def test_normalized_bar_accepts_zero_close_as_price() -> None:
+    meta = ProviderDatasetMeta(
+        provider=ProviderName.AKSHARE,
+        interface="stock_zh_a_hist",
+        retrieved_at=datetime(2026, 4, 30, tzinfo=UTC),
+        asset_id="000001",
+        asset_type=AssetType.STOCK,
+        adjustment=AdjustmentMode.NONE,
+    )
+    bar = NormalizedBar(
+        asset_id="000001",
+        asset_type=AssetType.STOCK,
+        date=date(2024, 1, 2),
+        close=Decimal("0"),
+        tradable=True,
+        meta=meta,
+    )
+
+    assert bar.effective_price == Decimal("0")
+
+
 def test_normalized_bar_uses_nav_for_public_fund() -> None:
     meta = ProviderDatasetMeta(
         provider=ProviderName.AKSHARE,
         interface="fund_open_fund_info_em",
-        retrieved_at=datetime(2026, 4, 30, tzinfo=timezone.utc),
+        retrieved_at=datetime(2026, 4, 30, tzinfo=UTC),
         asset_id="710001",
         asset_type=AssetType.PUBLIC_FUND,
         adjustment=AdjustmentMode.NONE,
@@ -65,7 +108,7 @@ def test_normalized_bar_requires_a_price() -> None:
     meta = ProviderDatasetMeta(
         provider=ProviderName.AKSHARE,
         interface="fund_open_fund_info_em",
-        retrieved_at=datetime(2026, 4, 30, tzinfo=timezone.utc),
+        retrieved_at=datetime(2026, 4, 30, tzinfo=UTC),
         asset_id="710001",
         asset_type=AssetType.PUBLIC_FUND,
         adjustment=AdjustmentMode.NONE,

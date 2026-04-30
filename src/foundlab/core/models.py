@@ -48,7 +48,10 @@ class NormalizedBar:
 
     @property
     def effective_price(self) -> Decimal | None:
-        return self.adjusted_close or self.close or self.nav or self.accumulated_nav
+        for price in (self.adjusted_close, self.close, self.nav, self.accumulated_nav):
+            if price is not None:
+                return price
+        return None
 
 
 @dataclass(frozen=True)

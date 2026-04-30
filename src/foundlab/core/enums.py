@@ -1,35 +1,35 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class AssetType(str, Enum):
+class AssetType(StrEnum):
     ETF = "etf"
     STOCK = "stock"
     PUBLIC_FUND = "public_fund"
 
 
-class ProviderName(str, Enum):
+class ProviderName(StrEnum):
     AKSHARE = "akshare"
     TUSHARE = "tushare"
 
 
-class AdjustmentMode(str, Enum):
+class AdjustmentMode(StrEnum):
     NONE = ""
     QFQ = "qfq"
     HFQ = "hfq"
 
 
-class OrderSide(str, Enum):
+class OrderSide(StrEnum):
     BUY = "buy"
     SELL = "sell"
 
 
-class NonTradingDayPolicy(str, Enum):
+class NonTradingDayPolicy(StrEnum):
     FAIL = "fail"
     SKIP = "skip"
     NEXT = "next"
 
 
-class RunStatus(str, Enum):
+class RunStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
     SUCCEEDED = "succeeded"
