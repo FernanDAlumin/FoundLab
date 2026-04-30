@@ -1,3 +1,4 @@
+import pytest
 from sqlalchemy import text
 from sqlmodel import Session, SQLModel, create_engine
 
@@ -30,6 +31,7 @@ def test_create_and_list_assets() -> None:
 
     assert asset.id is not None
     assert [item.asset_id for item in assets] == ["510300"]
+    assert isinstance(assets[0].asset_type, AssetType)
     assert assets[0].asset_type == AssetType.ETF
 
 
@@ -66,8 +68,20 @@ def test_create_run_for_asset() -> None:
     assert loaded is not None
     assert loaded.name == "ETF baseline"
     assert loaded.asset_ids == ["510300"]
+    assert isinstance(loaded.status, RunStatus)
     assert loaded.status == RunStatus.PENDING
     assert raw_asset_ids == '["510300"]'
+
+
+def test_create_run_rejects_none_asset_ids() -> None:
+    with make_session() as session:
+        with pytest.raises(ValueError, match="asset_ids must be a list"):
+            create_run(
+                session,
+                name="ETF baseline",
+                asset_ids=None,  # type: ignore[arg-type]
+                strategy_name="daily_dca",
+            )
 
 
 def test_run_status_persists_public_value() -> None:
@@ -104,12 +118,18 @@ def test_update_run_status_persists_changes() -> None:
             error_message="bad data",
         )
         loaded = get_run(session, run.id)
+        raw_status, raw_error_message = session.exec(
+            text("select status, error_message from backtest_runs where id = :run_id"),
+            params={"run_id": run.id},
+        ).one()
 
     assert loaded is not None
     assert loaded.status == RunStatus.FAILED
     assert loaded.warning_count == 2
     assert loaded.error_message == "bad data"
     assert loaded.updated_at != original_updated_at
+    assert raw_status == RunStatus.FAILED.value
+    assert raw_error_message == "bad data"
 
 
 def test_tables_are_importable_for_api_and_worker() -> None:

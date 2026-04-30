@@ -30,6 +30,9 @@ def create_run(
     asset_ids: list[str],
     strategy_name: str,
 ) -> BacktestRunRecord:
+    if not isinstance(asset_ids, list):
+        raise ValueError("asset_ids must be a list")
+
     run = BacktestRunRecord(
         name=name,
         asset_ids=asset_ids,
