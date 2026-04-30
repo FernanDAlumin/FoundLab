@@ -1,3 +1,8 @@
+import os
+import subprocess
+import sys
+from pathlib import Path
+
 import pytest
 from sqlalchemy import text
 from sqlalchemy.pool import StaticPool
@@ -32,6 +37,30 @@ def make_shared_memory_engine():
 
 def test_utc_now_returns_naive_datetime() -> None:
     assert utc_now().tzinfo is None
+
+
+def test_create_db_and_tables_registers_models_without_prior_import(tmp_path) -> None:
+    src_path = os.fspath((Path(__file__).parents[2] / "src").resolve())
+    script = """
+from sqlalchemy import inspect
+
+from foundlab.storage import database
+
+database.create_db_and_tables()
+tables = set(inspect(database.engine).get_table_names())
+assert {"assets", "backtest_runs"}.issubset(tables), tables
+"""
+    env = {**os.environ, "PYTHONPATH": src_path}
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        check=False,
+        cwd=tmp_path,
+        env=env,
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 0, result.stderr
 
 
 def test_create_and_list_assets() -> None:
@@ -128,6 +157,29 @@ def test_backtest_run_record_rejects_non_string_asset_ids(
             )
             session.add(run)
             session.commit()
+
+
+def test_backtest_run_record_rejects_invalid_asset_ids_assignment() -> None:
+    run = BacktestRunRecord(
+        name="ETF baseline",
+        asset_ids=["510300"],
+        strategy_name="daily_dca",
+    )
+
+    with pytest.raises(ValueError, match="asset_ids must be a list of strings"):
+        run.asset_ids = [123]  # type: ignore[list-item]
+
+
+def test_backtest_run_record_accepts_valid_asset_ids_assignment() -> None:
+    run = BacktestRunRecord(
+        name="ETF baseline",
+        asset_ids=["510300"],
+        strategy_name="daily_dca",
+    )
+
+    run.asset_ids = ["159915"]
+
+    assert run.asset_ids == ["159915"]
 
 
 def test_run_status_persists_public_value() -> None:
