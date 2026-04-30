@@ -8,7 +8,8 @@ from foundlab.core.enums import AssetType, RunStatus
 
 
 def utc_now() -> datetime:
-    return datetime.now(UTC)
+    # SQLite stores datetimes without timezone metadata; keep record values naive UTC.
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def enum_value_column(enum_cls: type[StrEnum]) -> Enum:

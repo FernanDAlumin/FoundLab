@@ -30,8 +30,10 @@ def create_run(
     asset_ids: list[str],
     strategy_name: str,
 ) -> BacktestRunRecord:
-    if not isinstance(asset_ids, list):
-        raise ValueError("asset_ids must be a list")
+    if not isinstance(asset_ids, list) or not all(
+        isinstance(asset_id, str) for asset_id in asset_ids
+    ):
+        raise ValueError("asset_ids must be a list of strings")
 
     run = BacktestRunRecord(
         name=name,
