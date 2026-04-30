@@ -26,9 +26,9 @@ export default function App() {
           <h1>FoundLab</h1>
           <p>Investment decision backtesting dashboard</p>
         </div>
-        <button className="icon-button" type="button" aria-label="Open reports">
+        <span className="icon-button" aria-hidden="true">
           <BarChart3 size={20} />
-        </button>
+        </span>
       </header>
 
       <section className="summary-grid" aria-label="Dashboard sections">
