@@ -1,5 +1,6 @@
 .superpowers
 .worktrees
+__pycache__/
 frontend/node_modules/
 frontend/dist/
 frontend/*.tsbuildinfo
