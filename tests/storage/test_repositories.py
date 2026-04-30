@@ -115,6 +115,21 @@ def test_create_run_rejects_non_string_asset_ids(asset_ids: list[object]) -> Non
             )
 
 
+@pytest.mark.parametrize("asset_ids", [[123], [None]])
+def test_backtest_run_record_rejects_non_string_asset_ids(
+    asset_ids: list[object],
+) -> None:
+    with make_session() as session:
+        with pytest.raises(ValueError, match="asset_ids must be a list of strings"):
+            run = BacktestRunRecord(
+                name="ETF baseline",
+                asset_ids=asset_ids,  # type: ignore[arg-type]
+                strategy_name="daily_dca",
+            )
+            session.add(run)
+            session.commit()
+
+
 def test_run_status_persists_public_value() -> None:
     with make_session() as session:
         run = create_run(

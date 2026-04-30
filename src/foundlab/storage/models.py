@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 
 from sqlalchemy import JSON, Column, Enum
+from sqlalchemy.orm import validates
 from sqlmodel import Field, SQLModel
 
 from foundlab.core.enums import AssetType, RunStatus
@@ -18,6 +19,14 @@ def enum_value_column(enum_cls: type[StrEnum]) -> Enum:
         values_callable=lambda members: [member.value for member in members],
         native_enum=False,
     )
+
+
+def validate_asset_ids_value(value: object) -> list[str]:
+    if not isinstance(value, list) or not all(
+        isinstance(asset_id, str) for asset_id in value
+    ):
+        raise ValueError("asset_ids must be a list of strings")
+    return value
 
 
 class AssetRecord(SQLModel, table=True):
@@ -50,3 +59,7 @@ class BacktestRunRecord(SQLModel, table=True):
     error_message: str | None = None
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
+
+    @validates("asset_ids")
+    def validate_asset_ids(self, _key: str, value: object) -> list[str]:
+        return validate_asset_ids_value(value)

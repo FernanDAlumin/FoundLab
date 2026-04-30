@@ -1,7 +1,12 @@
 from sqlmodel import Session, select
 
 from foundlab.core.enums import AssetType, RunStatus
-from foundlab.storage.models import AssetRecord, BacktestRunRecord, utc_now
+from foundlab.storage.models import (
+    AssetRecord,
+    BacktestRunRecord,
+    utc_now,
+    validate_asset_ids_value,
+)
 
 
 def create_asset(
@@ -30,10 +35,7 @@ def create_run(
     asset_ids: list[str],
     strategy_name: str,
 ) -> BacktestRunRecord:
-    if not isinstance(asset_ids, list) or not all(
-        isinstance(asset_id, str) for asset_id in asset_ids
-    ):
-        raise ValueError("asset_ids must be a list of strings")
+    validate_asset_ids_value(asset_ids)
 
     run = BacktestRunRecord(
         name=name,
