@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import text
+from sqlalchemy.engine import Engine
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
@@ -25,7 +26,7 @@ def make_session() -> Session:
     return Session(engine)
 
 
-def make_shared_memory_engine():
+def make_shared_memory_engine() -> Engine:
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
@@ -39,7 +40,7 @@ def test_utc_now_returns_naive_datetime() -> None:
     assert utc_now().tzinfo is None
 
 
-def test_create_db_and_tables_registers_models_without_prior_import(tmp_path) -> None:
+def test_create_db_and_tables_registers_models_without_prior_import(tmp_path: Path) -> None:
     src_path = os.fspath((Path(__file__).parents[2] / "src").resolve())
     script = """
 from sqlalchemy import inspect
@@ -89,7 +90,7 @@ def test_asset_type_persists_public_value() -> None:
             asset_type=AssetType.ETF,
             name="沪深300ETF",
         )
-        raw_asset_type = session.exec(text("select asset_type from assets")).one()[0]
+        raw_asset_type = session.execute(text("select asset_type from assets")).one()[0]
 
     assert raw_asset_type == AssetType.ETF.value
 
@@ -109,7 +110,7 @@ def test_create_run_for_asset() -> None:
             strategy_name="daily_dca",
         )
         loaded = get_run(session, run.id)
-        raw_asset_ids = session.exec(text("select asset_ids from backtest_runs")).one()[0]
+        raw_asset_ids = session.execute(text("select asset_ids from backtest_runs")).one()[0]
 
     assert loaded is not None
     assert loaded.name == "ETF baseline"
@@ -152,7 +153,7 @@ def test_backtest_run_record_rejects_non_string_asset_ids(
         with pytest.raises(ValueError, match="asset_ids must be a list of strings"):
             run = BacktestRunRecord(
                 name="ETF baseline",
-                asset_ids=asset_ids,  # type: ignore[arg-type]
+                asset_ids=asset_ids,
                 strategy_name="daily_dca",
             )
             session.add(run)
@@ -190,7 +191,8 @@ def test_run_status_persists_public_value() -> None:
             asset_ids=["510300"],
             strategy_name="daily_dca",
         )
-        raw_status = session.exec(
+        assert run.id is not None
+        raw_status = session.execute(
             text("select status from backtest_runs where id = :run_id"),
             params={"run_id": run.id},
         ).one()[0]
@@ -218,10 +220,11 @@ def test_update_run_status_persists_changes() -> None:
             error_message="bad data",
         )
         run_id = run.id
+        assert run_id is not None
 
     with Session(engine) as session:
         loaded = get_run(session, run_id)
-        raw_status, raw_error_message = session.exec(
+        raw_status, raw_error_message = session.execute(
             text("select status, error_message from backtest_runs where id = :run_id"),
             params={"run_id": run_id},
         ).one()

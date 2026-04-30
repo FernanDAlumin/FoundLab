@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Any
+from typing import Protocol, cast
 
 import pandas as pd
 
@@ -7,12 +7,36 @@ from foundlab.core.data.provider import ProviderRequest
 from foundlab.core.enums import AssetType
 
 
+class AkShareClient(Protocol):
+    def fund_etf_hist_em(
+        self,
+        *,
+        symbol: str,
+        period: str,
+        start_date: str,
+        end_date: str,
+        adjust: str,
+    ) -> pd.DataFrame: ...
+
+    def stock_zh_a_hist(
+        self,
+        *,
+        symbol: str,
+        period: str,
+        start_date: str,
+        end_date: str,
+        adjust: str,
+    ) -> pd.DataFrame: ...
+
+    def fund_open_fund_info_em(self, *, symbol: str, indicator: str) -> pd.DataFrame: ...
+
+
 class AkShareProvider:
-    def __init__(self, client: Any | None = None) -> None:
+    def __init__(self, client: AkShareClient | None = None) -> None:
         if client is None:
             import akshare as ak
 
-            client = ak
+            client = cast(AkShareClient, ak)
         self._client = client
 
     def fetch_daily(self, request: ProviderRequest) -> pd.DataFrame:
