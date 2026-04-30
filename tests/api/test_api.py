@@ -1,6 +1,7 @@
 from collections.abc import Generator
 
 from fastapi.testclient import TestClient
+from pytest import MonkeyPatch
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
@@ -47,7 +48,7 @@ def test_health_returns_ok() -> None:
     assert response.json() == {"status": "ok", "service": "foundlab-api"}
 
 
-def test_app_lifespan_creates_db_tables(monkeypatch) -> None:
+def test_app_lifespan_creates_db_tables(monkeypatch: MonkeyPatch) -> None:
     calls = 0
 
     def fake_create_db_and_tables() -> None:
