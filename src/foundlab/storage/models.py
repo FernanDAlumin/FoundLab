@@ -1,11 +1,14 @@
 from datetime import UTC, datetime
+from datetime import date as Date
 from enum import StrEnum
 
 from sqlalchemy import JSON, Column, Enum
 from sqlalchemy.orm import validates
 from sqlmodel import Field, SQLModel
 
-from foundlab.core.enums import AssetType, RunStatus
+from foundlab.core.enums import AdjustmentMode, AssetType, ProviderName, RunStatus
+
+JsonScalar = str | int | float | bool | None
 
 
 def utc_now() -> datetime:
@@ -51,6 +54,12 @@ class BacktestRunRecord(SQLModel, table=True):
         default_factory=list,
         sa_column=Column(JSON, nullable=False),
     )
+    start_date: Date | None = None
+    end_date: Date | None = None
+    adjustment: AdjustmentMode = Field(
+        default=AdjustmentMode.QFQ,
+        sa_column=Column(enum_value_column(AdjustmentMode), nullable=False),
+    )
     status: RunStatus = Field(
         default=RunStatus.PENDING,
         sa_column=Column(enum_value_column(RunStatus), index=True, nullable=False),
@@ -63,3 +72,72 @@ class BacktestRunRecord(SQLModel, table=True):
     @validates("asset_ids")
     def validate_asset_ids(self, _key: str, value: object) -> list[str]:
         return validate_asset_ids_value(value)
+
+
+class RawMarketDataRecord(SQLModel, table=True):
+    __tablename__ = "raw_market_data"
+
+    id: int | None = Field(default=None, primary_key=True)
+    run_id: int = Field(index=True)
+    asset_id: str = Field(index=True)
+    asset_type: AssetType = Field(
+        sa_column=Column(enum_value_column(AssetType), index=True, nullable=False),
+    )
+    provider: ProviderName = Field(
+        sa_column=Column(enum_value_column(ProviderName), index=True, nullable=False),
+    )
+    interface: str
+    adjustment: AdjustmentMode = Field(
+        sa_column=Column(enum_value_column(AdjustmentMode), nullable=False),
+    )
+    start_date: Date
+    end_date: Date
+    retrieved_at: datetime
+    row_count: int
+    rows: list[dict[str, JsonScalar]] = Field(
+        default_factory=list,
+        sa_column=Column(JSON, nullable=False),
+    )
+    created_at: datetime = Field(default_factory=utc_now)
+
+
+class CleanMarketDataBarRecord(SQLModel, table=True):
+    __tablename__ = "clean_market_data_bars"
+
+    id: int | None = Field(default=None, primary_key=True)
+    run_id: int = Field(index=True)
+    asset_id: str = Field(index=True)
+    asset_type: AssetType = Field(
+        sa_column=Column(enum_value_column(AssetType), index=True, nullable=False),
+    )
+    provider: ProviderName = Field(
+        sa_column=Column(enum_value_column(ProviderName), index=True, nullable=False),
+    )
+    interface: str
+    adjustment: AdjustmentMode = Field(
+        sa_column=Column(enum_value_column(AdjustmentMode), nullable=False),
+    )
+    date: Date = Field(index=True)
+    open: str | None = None
+    high: str | None = None
+    low: str | None = None
+    close: str | None = None
+    adjusted_close: str | None = None
+    nav: str | None = None
+    accumulated_nav: str | None = None
+    volume: str | None = None
+    tradable: bool
+    retrieved_at: datetime
+    created_at: datetime = Field(default_factory=utc_now)
+
+
+class DataWarningRecord(SQLModel, table=True):
+    __tablename__ = "data_warnings"
+
+    id: int | None = Field(default=None, primary_key=True)
+    run_id: int = Field(index=True)
+    asset_id: str | None = Field(default=None, index=True)
+    date: Date | None = Field(default=None, index=True)
+    code: str = Field(index=True)
+    message: str
+    created_at: datetime = Field(default_factory=utc_now)

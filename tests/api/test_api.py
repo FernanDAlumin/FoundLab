@@ -6,8 +6,11 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
 import foundlab.api.main as api_main
+import foundlab.api.routes.runs as runs_route
 from foundlab.api.main import create_app
+from foundlab.core.enums import RunStatus
 from foundlab.storage.database import get_session
+from foundlab.worker.jobs import JobResult
 
 ASSET_PAYLOAD = {
     "asset_id": "510300",
@@ -19,6 +22,9 @@ RUN_PAYLOAD = {
     "name": "ETF baseline",
     "asset_ids": ["510300"],
     "strategy_name": "daily_dca",
+    "start_date": "2024-01-01",
+    "end_date": "2024-01-31",
+    "adjustment": "qfq",
 }
 
 
@@ -108,6 +114,9 @@ def test_create_run_returns_id() -> None:
         "name": "ETF baseline",
         "asset_ids": ["510300"],
         "strategy_name": "daily_dca",
+        "start_date": "2024-01-01",
+        "end_date": "2024-01-31",
+        "adjustment": "qfq",
         "status": "pending",
         "warning_count": 0,
         "error_message": None,
@@ -128,6 +137,9 @@ def test_get_run_returns_pending_run() -> None:
         "name": "ETF baseline",
         "asset_ids": ["510300"],
         "strategy_name": "daily_dca",
+        "start_date": "2024-01-01",
+        "end_date": "2024-01-31",
+        "adjustment": "qfq",
         "status": "pending",
         "warning_count": 0,
         "error_message": None,
@@ -141,3 +153,38 @@ def test_get_run_returns_404_when_run_does_not_exist() -> None:
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Run not found"}
+
+
+def test_prepare_run_data_returns_job_result(monkeypatch: MonkeyPatch) -> None:
+    calls: list[int] = []
+
+    def fake_run_data_preparation_job(
+        session: Session,
+        run_id: int,
+    ) -> JobResult:
+        calls.append(run_id)
+        return JobResult(
+            run_id=run_id,
+            status=RunStatus.SUCCEEDED_WITH_WARNINGS,
+            warning_count=1,
+            bar_count=3,
+        )
+
+    monkeypatch.setattr(
+        runs_route,
+        "run_data_preparation_job",
+        fake_run_data_preparation_job,
+    )
+    client = make_client()
+
+    response = client.post("/api/runs/7/prepare-data")
+
+    assert response.status_code == 200
+    assert calls == [7]
+    assert response.json() == {
+        "run_id": 7,
+        "status": "succeeded_with_warnings",
+        "warning_count": 1,
+        "bar_count": 3,
+        "error_message": None,
+    }

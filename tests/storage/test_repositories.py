@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -9,11 +10,13 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
-from foundlab.core.enums import AssetType, RunStatus
+from foundlab.core.enums import AdjustmentMode, AssetType, RunStatus
+from foundlab.storage.database import ensure_backtest_run_data_columns
 from foundlab.storage.models import AssetRecord, BacktestRunRecord, utc_now
 from foundlab.storage.repositories import (
     create_asset,
     create_run,
+    get_assets_by_ids,
     get_run,
     list_assets,
     update_run_status,
@@ -49,7 +52,13 @@ from foundlab.storage import database
 
 database.create_db_and_tables()
 tables = set(inspect(database.engine).get_table_names())
-assert {"assets", "backtest_runs"}.issubset(tables), tables
+assert {
+    "assets",
+    "backtest_runs",
+    "raw_market_data",
+    "clean_market_data_bars",
+    "data_warnings",
+}.issubset(tables), tables
 """
     env = {**os.environ, "PYTHONPATH": src_path}
     result = subprocess.run(
@@ -62,6 +71,40 @@ assert {"assets", "backtest_runs"}.issubset(tables), tables
     )
 
     assert result.returncode == 0, result.stderr
+
+
+def test_ensure_backtest_run_data_columns_updates_existing_sqlite_table() -> None:
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                create table backtest_runs (
+                    id integer primary key,
+                    name varchar not null,
+                    strategy_name varchar not null,
+                    asset_ids json not null,
+                    status varchar not null,
+                    warning_count integer not null,
+                    error_message varchar,
+                    created_at datetime not null,
+                    updated_at datetime not null
+                )
+                """
+            )
+        )
+
+    ensure_backtest_run_data_columns(engine)
+
+    with engine.connect() as connection:
+        columns = {
+            row[1]: row[2]
+            for row in connection.execute(text("pragma table_info(backtest_runs)"))
+        }
+
+    assert columns["start_date"].upper() == "DATE"
+    assert columns["end_date"].upper() == "DATE"
+    assert columns["adjustment"].upper() == "VARCHAR(3)"
 
 
 def test_create_and_list_assets() -> None:
@@ -108,18 +151,38 @@ def test_create_run_for_asset() -> None:
             name="ETF baseline",
             asset_ids=[asset.asset_id],
             strategy_name="daily_dca",
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 1, 31),
+            adjustment=AdjustmentMode.QFQ,
         )
         loaded = get_run(session, run.id)
-        raw_asset_ids = session.execute(text("select asset_ids from backtest_runs")).one()[0]
+        raw_asset_ids, raw_adjustment = session.execute(
+            text("select asset_ids, adjustment from backtest_runs")
+        ).one()
 
     assert loaded is not None
     assert loaded.name == "ETF baseline"
     assert loaded.asset_ids == ["510300"]
+    assert loaded.start_date == date(2024, 1, 1)
+    assert loaded.end_date == date(2024, 1, 31)
+    assert loaded.adjustment == AdjustmentMode.QFQ
     assert isinstance(loaded.status, RunStatus)
     assert loaded.status == RunStatus.PENDING
     assert loaded.created_at.tzinfo is None
     assert loaded.updated_at.tzinfo is None
     assert raw_asset_ids == '["510300"]'
+    assert raw_adjustment == AdjustmentMode.QFQ.value
+
+
+def test_get_assets_by_ids_preserves_requested_order() -> None:
+    with make_session() as session:
+        create_asset(session, asset_id="000001", asset_type=AssetType.STOCK, name="平安银行")
+        create_asset(session, asset_id="510300", asset_type=AssetType.ETF, name="沪深300ETF")
+
+        assets = get_assets_by_ids(session, ["510300", "000001"])
+
+    assert [asset.asset_id for asset in assets] == ["510300", "000001"]
+    assert [asset.asset_type for asset in assets] == [AssetType.ETF, AssetType.STOCK]
 
 
 def test_create_run_rejects_none_asset_ids() -> None:
