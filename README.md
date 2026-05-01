@@ -2,6 +2,33 @@
 
 FoundLab is a dashboard-first backtesting platform for reviewing investment decisions against baseline strategies.
 
+## Usage Modes
+
+FoundLab currently supports two practical ways to work with the project.
+
+### 1. Agent Skill Workflow
+
+Use the project-local skill at `skill/foundlab-agent-workflow/` when you want an
+agent to operate FoundLab directly: fetch AkShare data, prepare normalized daily
+bars, run fixed-investment comparisons, and report verified results.
+
+Example request:
+
+```text
+Use $foundlab-agent-workflow to download 019058 public fund data from 2026-01-01
+to 2026-04-30 and compare daily, weekly, and monthly fixed investment with
+12 CNY per valid NAV day.
+```
+
+The skill is designed for research runs that reuse the existing Python infra and
+avoid adding framework code unless the requested workflow needs new product
+behavior.
+
+### 2. Backend And Frontend Apps
+
+Use the backend and frontend development commands below when you want to run the
+API and dashboard locally.
+
 ## Phase 1 Scope
 
 The current implementation foundation includes:

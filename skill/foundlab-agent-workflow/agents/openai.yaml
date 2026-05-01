@@ -1,0 +1,4 @@
+interface:
+  display_name: "FoundLab Agent Workflow"
+  short_description: "Use FoundLab through an agent workflow"
+  default_prompt: "Use $foundlab-agent-workflow to fetch fund data and compare daily, weekly, and monthly DCA results."
