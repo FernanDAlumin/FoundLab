@@ -1,5 +1,7 @@
 # FoundLab
 
+[中文 README](README.zh.md)
+
 FoundLab is a dashboard-first backtesting platform for reviewing investment decisions against baseline strategies.
 
 ## Usage Modes
